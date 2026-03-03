@@ -1,0 +1,35 @@
+# Go
+bin/
+dist/
+
+# Templ generated
+views/*_templ.go
+views/components/*_templ.go
+
+# Tailwind
+static/css/output.css
+static/css/input.css
+
+# SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Temporary
+tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Proto generated (tracked, but ignore local regen artifacts)
+# proto/*.pb.go are tracked intentionally
+
+# Air
+tmp/
