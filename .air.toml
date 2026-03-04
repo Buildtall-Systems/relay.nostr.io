@@ -3,7 +3,8 @@ tmp_dir = "tmp"
 
 [build]
   cmd = "templ generate && go build -o ./tmp/relay-authz ./cmd/relay-authz"
-  bin = "./tmp/relay-authz --config configs/dev.toml --seed configs/seed-admins.toml"
+  bin = "./tmp/relay-authz"
+  full_bin = "./tmp/relay-authz --config configs/dev.toml --seed configs/seed-admins.toml"
   delay = 1000
   exclude_dir = ["bin", "tmp", "static", "nix", "services", "proto"]
   exclude_regex = ["_templ\\.go$"]
