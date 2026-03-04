@@ -1,0 +1,8 @@
+log_level = "INFO"
+database_dir = "/var/lib/relay.nostr.io"
+
+[grpc]
+listen_address = "[::1]:50052"
+
+[http]
+listen_address = "127.0.0.1:8090"
