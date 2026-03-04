@@ -1,0 +1,21 @@
+[Unit]
+Description=relay.nostr.io Authorization Sidecar (gRPC + HTTP)
+After=network.target
+
+[Service]
+Type=simple
+User=nostr
+Group=nostr
+WorkingDirectory=/var/lib/relay.nostr.io
+ExecStart=/usr/local/bin/relay-authz --config /etc/relay.nostr.io/authz.toml
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/relay.nostr.io
+
+[Install]
+WantedBy=multi-user.target

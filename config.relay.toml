@@ -1,0 +1,28 @@
+[info]
+relay_url = "wss://relay.nostr.io/"
+name = "relay.nostr.io"
+description = "Authenticated Nostr relay operated by buildtall.systems"
+pubkey = ""
+contact = ""
+
+[diagnostics]
+tracing = false
+
+[database]
+data_directory = "/var/lib/relay.nostr.io"
+
+[network]
+address = "0.0.0.0"
+port = 7778
+
+[grpc]
+event_admission_server = "http://[::1]:50052"
+restricts_write = true
+
+[authorization]
+nip42_auth = true
+
+[limits]
+messages_per_sec = 3
+max_event_bytes = 131072
+max_ws_message_bytes = 131072

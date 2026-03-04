@@ -1,0 +1,22 @@
+[Unit]
+Description=Nostr Relay (relay.nostr.io)
+After=network.target relay-nostr-io-authz.service
+Requires=relay-nostr-io-authz.service
+
+[Service]
+Type=simple
+User=nostr
+Group=nostr
+WorkingDirectory=/var/lib/relay.nostr.io
+ExecStart=/usr/local/bin/nostr-rs-relay --config /etc/relay.nostr.io/config.relay.toml
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/relay.nostr.io
+
+[Install]
+WantedBy=multi-user.target
