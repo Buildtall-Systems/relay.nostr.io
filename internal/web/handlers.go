@@ -15,11 +15,6 @@ import (
 const sessionDuration = 24 * time.Hour
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
 	// If already logged in, redirect to dashboard
 	cookie, err := r.Cookie(auth.SessionCookieName)
 	if err == nil {
@@ -115,7 +110,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   true,
+		Secure:   r.TLS != nil,
 		MaxAge:   int(sessionDuration.Seconds()),
 	})
 

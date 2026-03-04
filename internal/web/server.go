@@ -27,7 +27,7 @@ func New(addr string, database *db.DB, sessions *auth.SessionStore, logger *slog
 	mux := http.NewServeMux()
 
 	// Public routes
-	mux.HandleFunc("GET /", s.handleIndex)
+	mux.HandleFunc("GET /{$}", s.handleIndex)
 	mux.HandleFunc("POST /api/auth/challenge", s.handleChallenge)
 	mux.HandleFunc("POST /api/auth/verify", s.handleVerify)
 	mux.HandleFunc("POST /api/auth/logout", s.handleLogout)
