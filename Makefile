@@ -1,4 +1,4 @@
-.PHONY: help build dev-web generate-css generate-templ generate-proto test clean lint check-nolint install deploy
+.PHONY: help build run seed dev-web generate-css generate-templ generate-proto test clean lint check-nolint install deploy
 
 BINARY_NAME=relay-authz
 VERSION?=dev
@@ -10,7 +10,9 @@ help:
 	@echo "relay.nostr.io — Authenticated Nostr Relay"
 	@echo ""
 	@echo "  make build           - Build the binary"
-	@echo "  make dev-web         - Run with live reload (web + templ + tailwind)"
+	@echo "  make run             - Build and run locally (dev config + seed admins)"
+	@echo "  make seed            - Seed admin npubs from configs/seed-admins.toml"
+	@echo "  make dev-web         - Run with live reload (air + templ + tailwind)"
 	@echo "  make generate-templ  - Generate Go code from templ templates"
 	@echo "  make generate-css    - Generate Tailwind CSS"
 	@echo "  make generate-proto  - Generate Go code from proto files"
@@ -21,9 +23,20 @@ help:
 	@echo "  make deploy          - Deploy to production"
 
 build: generate-templ generate-css
-	go build ${LDFLAGS} -o bin/${BINARY_NAME} ./cmd/${BINARY_NAME}
+	nix develop -c go build ${LDFLAGS} -o bin/${BINARY_NAME} ./cmd/${BINARY_NAME}
+
+run: build
+	@mkdir -p tmp
+	./bin/${BINARY_NAME} --config configs/dev.toml --seed configs/seed-admins.toml
+
+seed: build
+	@mkdir -p tmp
+	./bin/${BINARY_NAME} --config configs/dev.toml --seed configs/seed-admins.toml &
+	@sleep 1 && kill $$!
+	@echo "Admin npubs seeded into tmp/relay-authz.db"
 
 dev-web:
+	@mkdir -p tmp
 	@echo "Starting development servers..."
 	@make -j3 dev-air dev-templ dev-tailwind
 
@@ -43,12 +56,12 @@ generate-css:
 	nix develop -c sh -c 'cat $$BTK_THEME_PATH static/css/custom.css > static/css/input.css && tailwindcss -i static/css/input.css -o static/css/output.css --minify'
 
 generate-proto:
-	protoc --go_out=. --go_opt=paths=source_relative \
+	nix develop -c protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		proto/nauthz.proto
 
 test:
-	go test -v -race -failfast ./...
+	nix develop -c go test -v -race -failfast ./...
 
 check-nolint:
 	@if grep -rn '//nolint' --include='*.go' --exclude='*_test.go' . 2>/dev/null; then \
@@ -57,13 +70,13 @@ check-nolint:
 	fi
 
 lint: check-nolint
-	golangci-lint run --max-issues-per-linter=1 --max-same-issues=1
+	nix develop -c golangci-lint run --max-issues-per-linter=1 --max-same-issues=1
 
 clean:
-	rm -rf bin/ dist/ tmp/*.db views/*_templ.go views/components/*_templ.go static/css/output.css static/css/input.css
+	rm -rf bin/ dist/ tmp/ views/*_templ.go views/components/*_templ.go static/css/output.css static/css/input.css
 
 install: build
-	go install ${LDFLAGS} ./cmd/${BINARY_NAME}
+	nix develop -c go install ${LDFLAGS} ./cmd/${BINARY_NAME}
 
 deploy:
 	bash deploy.sh
