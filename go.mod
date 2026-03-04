@@ -3,6 +3,7 @@ module github.com/Buildtall-Systems/relay.nostr.io
 go 1.25.0
 
 require (
+	github.com/a-h/templ v0.3.1001
 	github.com/nbd-wtf/go-nostr v0.52.3
 	github.com/pressly/goose/v3 v3.27.0
 	google.golang.org/grpc v1.79.1

@@ -1,0 +1,70 @@
+package views
+
+templ Login() {
+	@Layout("Login") {
+		<div class="flex flex-col items-center justify-center mt-20">
+			<h2 class="text-2xl font-bold mb-4">Admin Login</h2>
+			<p class="text-gray-400 mb-8 text-center max-w-md">
+				Sign in with your Nostr identity using a NIP-07 browser extension (nos2x, Alby, etc.)
+			</p>
+			<div id="login-error" class="hidden text-red-400 mb-4"></div>
+			<button
+				id="login-btn"
+				onclick="doLogin()"
+				class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors"
+			>
+				Sign in with Nostr
+			</button>
+			<p id="no-extension" class="hidden text-yellow-400 mt-4 text-sm">
+				No NIP-07 extension detected. Install nos2x or Alby to continue.
+			</p>
+		</div>
+		<script>
+			async function doLogin() {
+				const errEl = document.getElementById('login-error');
+				const noExtEl = document.getElementById('no-extension');
+				errEl.classList.add('hidden');
+				noExtEl.classList.add('hidden');
+
+				if (!window.nostr) {
+					noExtEl.classList.remove('hidden');
+					return;
+				}
+
+				try {
+					const pubkey = await window.nostr.getPublicKey();
+
+					const challengeResp = await fetch('/api/auth/challenge', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ pubkey: pubkey })
+					});
+
+					if (!challengeResp.ok) {
+						const msg = await challengeResp.text();
+						throw new Error(msg || 'Failed to get challenge');
+					}
+
+					const challengeEvent = await challengeResp.json();
+					const signedEvent = await window.nostr.signEvent(challengeEvent);
+
+					const verifyResp = await fetch('/api/auth/verify', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(signedEvent)
+					});
+
+					if (!verifyResp.ok) {
+						const msg = await verifyResp.text();
+						throw new Error(msg || 'Verification failed');
+					}
+
+					window.location.href = '/dashboard';
+				} catch (err) {
+					errEl.textContent = err.message;
+					errEl.classList.remove('hidden');
+				}
+			}
+		</script>
+	}
+}

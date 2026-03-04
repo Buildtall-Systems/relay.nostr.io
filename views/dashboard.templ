@@ -1,0 +1,47 @@
+package views
+
+import "github.com/Buildtall-Systems/relay.nostr.io/internal/db"
+
+templ Dashboard(pubkeys []db.AllowedPubkey) {
+	@Layout("Dashboard") {
+		<div class="flex items-center justify-between mb-8">
+			<h2 class="text-2xl font-bold">Authorized Pubkeys</h2>
+			<form action="/api/auth/logout" method="POST">
+				<button type="submit" class="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+					Logout
+				</button>
+			</form>
+		</div>
+		<div class="mb-6">
+			<form
+				hx-post="/api/pubkeys"
+				hx-target="#pubkey-table"
+				hx-swap="innerHTML"
+				class="flex gap-3"
+			>
+				<input
+					type="text"
+					name="npub"
+					placeholder="npub1..."
+					required
+					class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500"
+				/>
+				<input
+					type="text"
+					name="note"
+					placeholder="Note (optional)"
+					class="w-48 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-purple-500"
+				/>
+				<button
+					type="submit"
+					class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+				>
+					Add
+				</button>
+			</form>
+		</div>
+		<div id="pubkey-table">
+			@PubkeyTable(pubkeys)
+		</div>
+	}
+}
