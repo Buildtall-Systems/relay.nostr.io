@@ -6,3 +6,4 @@ listen_address = "[::1]:50052"
 
 [http]
 listen_address = "127.0.0.1:8090"
+public_base_url = "https://auth.nostr.io"

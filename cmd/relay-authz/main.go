@@ -65,7 +65,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("opening database: %w", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	if err := database.Migrate(); err != nil {
 		return fmt.Errorf("running migrations: %w", err)
@@ -102,7 +102,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Start HTTP server
 	sessions := auth.NewSessionStore(database.DB)
-	httpServer := web.New(cfg.HTTP.ListenAddress, database, sessions, logger)
+	httpServer := web.New(cfg.HTTP.ListenAddress, cfg.HTTP.PublicBaseURL, database, sessions, logger)
 
 	go func() {
 		logger.Info("HTTP server starting", "addr", cfg.HTTP.ListenAddress)
@@ -124,7 +124,7 @@ func run(cmd *cobra.Command, args []string) error {
 	grpcServer.GracefulStop()
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5_000_000_000) // 5s
 	defer shutdownCancel()
-	httpServer.Shutdown(shutdownCtx)
+	_ = httpServer.Shutdown(shutdownCtx)
 
 	logger.Info("shutdown complete")
 	return nil

@@ -23,7 +23,7 @@ func NewServer(database *db.DB, logger *slog.Logger) *Server {
 }
 
 func (s *Server) EventAdmit(ctx context.Context, req *pb.EventRequest) (*pb.EventReply, error) {
-	if req.AuthPubkey == nil || len(req.AuthPubkey) == 0 {
+	if len(req.AuthPubkey) == 0 {
 		s.logger.Info("DENY: no NIP-42 authentication")
 		return &pb.EventReply{
 			Decision: pb.Decision_DECISION_DENY,

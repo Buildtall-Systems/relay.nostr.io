@@ -38,7 +38,7 @@ func (db *DB) ListAllowedPubkeys(ctx context.Context) ([]AllowedPubkey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listing allowed pubkeys: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var pubkeys []AllowedPubkey
 	for rows.Next() {
@@ -96,7 +96,7 @@ func (db *DB) SeedAdmins(ctx context.Context, npubs []string) error {
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareContext(ctx,
 		`INSERT OR IGNORE INTO admin_pubkeys (hex_pubkey, npub) VALUES (?, ?)`,
@@ -104,7 +104,7 @@ func (db *DB) SeedAdmins(ctx context.Context, npubs []string) error {
 	if err != nil {
 		return fmt.Errorf("preparing statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	for _, npub := range npubs {
 		_, hexPubkey, err := nip19.Decode(npub)

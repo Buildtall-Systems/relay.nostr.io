@@ -71,7 +71,7 @@ func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(challenge.Event)
+	_ = json.NewEncoder(w).Encode(challenge.Event)
 }
 
 func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +120,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(auth.SessionCookieName)
 	if err == nil {
-		s.sessions.Delete(r.Context(), cookie.Value)
+		_ = s.sessions.Delete(r.Context(), cookie.Value)
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -196,4 +196,92 @@ func (s *Server) handleRemovePubkey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.handleListPubkeys(w, r)
+}
+
+type apiPubkeyEntry struct {
+	HexPubkey string `json:"hex_pubkey"`
+	Npub      string `json:"npub"`
+	Note      string `json:"note"`
+	AddedBy   string `json:"added_by"`
+	AddedAt   string `json:"added_at"`
+}
+
+type apiAddPubkeyRequest struct {
+	Npub string `json:"npub"`
+	Note string `json:"note"`
+}
+
+func (s *Server) handleAPIListPubkeys(w http.ResponseWriter, r *http.Request) {
+	pubkeys, err := s.db.ListAllowedPubkeys(r.Context())
+	if err != nil {
+		s.logger.Error("listing pubkeys", "err", err)
+		writeAPIError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	entries := make([]apiPubkeyEntry, len(pubkeys))
+	for i, pk := range pubkeys {
+		entries[i] = apiPubkeyEntry{
+			HexPubkey: pk.HexPubkey,
+			Npub:      pk.Npub,
+			Note:      pk.Note,
+			AddedBy:   pk.AddedBy,
+			AddedAt:   pk.AddedAt.Format(time.RFC3339),
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(entries)
+}
+
+func (s *Server) handleAPIAddPubkey(w http.ResponseWriter, r *http.Request) {
+	var req apiAddPubkeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAPIError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Npub == "" {
+		writeAPIError(w, http.StatusBadRequest, "npub required")
+		return
+	}
+
+	addedBy := auth.GetNIP98Pubkey(r)
+
+	if err := s.db.AddAllowedPubkey(r.Context(), req.Npub, addedBy, req.Note); err != nil {
+		s.logger.Error("adding pubkey", "err", err)
+		writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("failed to add: %v", err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"npub":     req.Npub,
+		"note":     req.Note,
+		"added_by": addedBy,
+	})
+}
+
+func (s *Server) handleAPIRemovePubkey(w http.ResponseWriter, r *http.Request) {
+	hexPubkey := r.PathValue("hex")
+	if hexPubkey == "" {
+		writeAPIError(w, http.StatusBadRequest, "hex pubkey required")
+		return
+	}
+
+	if err := s.db.RemoveAllowedPubkey(r.Context(), hexPubkey); err != nil {
+		s.logger.Error("removing pubkey", "err", err)
+		writeAPIError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
+
+func writeAPIError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }

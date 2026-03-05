@@ -13,7 +13,7 @@ data_directory = "/var/lib/relay.nostr.io"
 
 [network]
 address = "0.0.0.0"
-port = 7778
+port = 7780
 
 [grpc]
 event_admission_server = "http://[::1]:50052"

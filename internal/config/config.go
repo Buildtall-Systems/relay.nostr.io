@@ -19,6 +19,7 @@ type GRPC struct {
 
 type HTTP struct {
 	ListenAddress string `mapstructure:"listen_address"`
+	PublicBaseURL string `mapstructure:"public_base_url"`
 }
 
 func Load(path string) (*Config, error) {
@@ -35,6 +36,7 @@ func Load(path string) (*Config, error) {
 	viper.SetDefault("database_dir", ".")
 	viper.SetDefault("grpc.listen_address", "[::1]:50052")
 	viper.SetDefault("http.listen_address", "127.0.0.1:8090")
+	viper.SetDefault("http.public_base_url", "http://localhost:8090")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("reading config: %w", err)
