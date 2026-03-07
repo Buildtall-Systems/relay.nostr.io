@@ -23,7 +23,7 @@ help:
 	@echo "  make deploy          - Deploy to production"
 
 build: generate-templ generate-css
-	nix develop -c go build ${LDFLAGS} -o bin/${BINARY_NAME} ./cmd/${BINARY_NAME}
+	CGO_ENABLED=0 nix develop -c go build ${LDFLAGS} -o bin/${BINARY_NAME} ./cmd/${BINARY_NAME}
 
 run: build
 	@mkdir -p tmp

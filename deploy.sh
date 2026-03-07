@@ -5,7 +5,7 @@ HOST="${DEPLOY_HOST:-nostr.io}"
 REMOTE_USER="${DEPLOY_USER:-root}"
 
 echo "Building relay-authz..."
-nix develop -c go build -ldflags "-X 'main.version=$(git describe --tags --always)' -X 'main.commit=$(git rev-parse --short HEAD)' -X 'main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)'" -o bin/relay-authz ./cmd/relay-authz
+CGO_ENABLED=0 nix develop -c go build -ldflags "-X 'main.version=$(git describe --tags --always)' -X 'main.commit=$(git rev-parse --short HEAD)' -X 'main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)'" -o bin/relay-authz ./cmd/relay-authz
 
 echo "Deploying to ${HOST}..."
 
