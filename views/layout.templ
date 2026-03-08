@@ -10,16 +10,34 @@ templ Layout(title string) {
 			<link rel="stylesheet" href="/static/css/output.css"/>
 			<script src="/static/js/htmx.min.js"></script>
 		</head>
-		<body class="bg-gray-950 text-gray-100 min-h-screen">
-			<nav class="border-b border-gray-800 px-6 py-4">
-				<div class="flex items-center justify-between max-w-4xl mx-auto">
-					<h1 class="text-lg font-bold tracking-tight">relay.nostr.io</h1>
-					<div id="nav-actions"></div>
+		<body class="bg-bg font-avenir antialiased">
+			<header class="bg-bg-subtle shadow-lg sticky top-0 z-50 border-b border-fg-muted">
+				<div class="max-w-4xl mx-auto">
+					<nav class="flex items-center justify-between px-6 py-4">
+						<a href="/" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+							<img src="/static/img/buildtall-triangles-4ply.svg" alt="buildtall.systems logo" width="32" height="32" class="drop-shadow-md"/>
+							<span class="font-semibold text-2xl tracking-tight text-fg">relay.nostr.io</span>
+						</a>
+						<div id="nav-actions"></div>
+					</nav>
 				</div>
-			</nav>
+			</header>
 			<main class="max-w-4xl mx-auto px-6 py-8">
 				{ children... }
 			</main>
+			<footer class="bg-bg-subtle border-t border-fg-muted py-8">
+				<div class="max-w-4xl mx-auto px-6">
+					<div class="flex flex-col md:flex-row justify-between items-center gap-4">
+						<p class="text-sm text-fg-subtle mb-0">
+							<span class="font-semibold">relay.nostr.io</span> — authenticated Nostr relay
+						</p>
+						<div class="flex items-center gap-6 text-sm">
+							<a href="https://github.com/buildtall-systems/relay.nostr.io" target="_blank" class="text-fg-subtle hover:text-primary transition-colors">GitHub</a>
+							<a href="https://buildtall.systems" target="_blank" class="text-fg-subtle hover:text-primary transition-colors">buildtall.systems</a>
+						</div>
+					</div>
+				</div>
+			</footer>
 		</body>
 	</html>
 }

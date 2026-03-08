@@ -3,19 +3,19 @@ package views
 templ Login() {
 	@Layout("Login") {
 		<div class="flex flex-col items-center justify-center mt-20">
-			<h2 class="text-2xl font-bold mb-4">Admin Login</h2>
-			<p class="text-gray-400 mb-8 text-center max-w-md">
+			<h2 class="text-2xl font-bold mb-4 text-fg">Admin Login</h2>
+			<p class="text-fg-subtle mb-8 text-center max-w-md">
 				Sign in with your Nostr identity using a NIP-07 browser extension (nos2x, Alby, etc.)
 			</p>
-			<div id="login-error" class="hidden text-red-400 mb-4"></div>
+			<div id="login-error" class="hidden text-danger mb-4"></div>
 			<button
 				id="login-btn"
 				onclick="doLogin()"
-				class="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors"
+				class="bg-primary hover:bg-secondary text-bg font-semibold px-8 py-3 rounded-lg transition-colors"
 			>
 				Sign in with Nostr
 			</button>
-			<p id="no-extension" class="hidden text-yellow-400 mt-4 text-sm">
+			<p id="no-extension" class="hidden text-warning mt-4 text-sm">
 				No NIP-07 extension detected. Install nos2x or Alby to continue.
 			</p>
 		</div>
