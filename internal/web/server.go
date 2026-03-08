@@ -35,15 +35,15 @@ func New(addr string, publicBaseURL string, database *db.DB, sessions *auth.Sess
 	// Static files
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	isAdmin := func(pubkeyHex string) (bool, error) {
-		return database.IsAdmin(context.Background(), pubkeyHex)
+	isAdmin := func(npub string) (bool, error) {
+		return database.IsAdmin(context.Background(), npub)
 	}
 
 	// NIP-98 authenticated REST API
 	apiMux := http.NewServeMux()
 	apiMux.HandleFunc("GET /api/v1/pubkeys", s.handleAPIListPubkeys)
 	apiMux.HandleFunc("POST /api/v1/pubkeys", s.handleAPIAddPubkey)
-	apiMux.HandleFunc("DELETE /api/v1/pubkeys/{hex}", s.handleAPIRemovePubkey)
+	apiMux.HandleFunc("DELETE /api/v1/pubkeys/{npub}", s.handleAPIRemovePubkey)
 
 	nip98Middleware := auth.RequireNIP98Admin(publicBaseURL, 60*time.Second, isAdmin)
 	mux.Handle("/api/v1/", nip98Middleware(apiMux))
@@ -53,7 +53,7 @@ func New(addr string, publicBaseURL string, database *db.DB, sessions *auth.Sess
 	adminMux.HandleFunc("GET /dashboard", s.handleDashboard)
 	adminMux.HandleFunc("GET /api/pubkeys", s.handleListPubkeys)
 	adminMux.HandleFunc("POST /api/pubkeys", s.handleAddPubkey)
-	adminMux.HandleFunc("DELETE /api/pubkeys/{hex}", s.handleRemovePubkey)
+	adminMux.HandleFunc("DELETE /api/pubkeys/{npub}", s.handleRemovePubkey)
 
 	mux.Handle("/", auth.RequireAdmin(sessions, isAdmin, adminMux))
 

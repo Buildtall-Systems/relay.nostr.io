@@ -1,23 +1,26 @@
 package views
 
-import (
-	"github.com/Buildtall-Systems/relay.nostr.io/internal/db"
-)
-
-func truncateNpub(npub string) string {
-	if len(npub) > 20 {
-		return npub[:12] + "..." + npub[len(npub)-8:]
-	}
-	return npub
-}
+import "github.com/Buildtall-Systems/relay.nostr.io/internal/db"
 
 templ PubkeyTable(pubkeys []db.AllowedPubkey) {
 	if len(pubkeys) == 0 {
-		<p class="text-gray-500 text-center py-8">No authorized pubkeys yet.</p>
+		<p class="text-fg-subtle text-center py-8">No authorized pubkeys yet.</p>
 	} else {
+		<script>
+			document.addEventListener('click', function(e) {
+				var btn = e.target.closest('.copy-npub-btn');
+				if (!btn) return;
+				var npub = btn.getAttribute('data-npub');
+				navigator.clipboard.writeText(npub).then(function() {
+					var orig = btn.innerHTML;
+					btn.innerHTML = '<span style="font-size:12px">Copied!</span>';
+					setTimeout(function() { btn.innerHTML = orig; }, 1500);
+				});
+			});
+		</script>
 		<table class="w-full">
 			<thead>
-				<tr class="text-left text-gray-400 text-sm border-b border-gray-800">
+				<tr class="text-left text-fg-subtle text-sm border-b border-fg-muted">
 					<th class="pb-3 font-medium">npub</th>
 					<th class="pb-3 font-medium">Note</th>
 					<th class="pb-3 font-medium">Added</th>
@@ -34,17 +37,29 @@ templ PubkeyTable(pubkeys []db.AllowedPubkey) {
 }
 
 templ PubkeyRow(pk db.AllowedPubkey) {
-	<tr class="border-b border-gray-800/50 hover:bg-gray-900/50" id={ "pk-" + pk.HexPubkey }>
-		<td class="py-3 font-mono text-sm" title={ pk.Npub }>{ truncateNpub(pk.Npub) }</td>
-		<td class="py-3 text-gray-400 text-sm">{ pk.Note }</td>
-		<td class="py-3 text-gray-500 text-sm">{ pk.AddedAt.Format("2006-01-02") }</td>
+	<tr class="border-b border-fg-muted/50 hover:bg-bg-subtle/50" id={ "pk-" + pk.Npub }>
+		<td class="py-3 font-mono text-sm text-fg break-all">
+			{ pk.Npub }
+			<button
+				class="copy-npub-btn ml-2 text-fg-subtle hover:text-primary transition-colors align-middle"
+				data-npub={ pk.Npub }
+				title="Copy npub"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+					<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+				</svg>
+			</button>
+		</td>
+		<td class="py-3 text-fg-subtle text-sm">{ pk.Note }</td>
+		<td class="py-3 text-fg-muted text-sm">{ pk.CreatedAt.Format("2006-01-02") }</td>
 		<td class="py-3 text-right">
 			<button
-				hx-delete={ "/api/pubkeys/" + pk.HexPubkey }
+				hx-delete={ "/api/pubkeys/" + pk.Npub }
 				hx-target="#pubkey-table"
 				hx-swap="innerHTML"
 				hx-confirm="Remove this pubkey?"
-				class="text-red-400 hover:text-red-300 text-sm transition-colors"
+				class="text-danger hover:text-danger/80 text-sm transition-colors"
 			>
 				Remove
 			</button>

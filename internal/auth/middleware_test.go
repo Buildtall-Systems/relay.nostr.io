@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
 func nip98Header(t *testing.T, sk, url, method string) string {
@@ -27,13 +28,14 @@ func neverAdmin(_ string) (bool, error)  { return false, nil }
 func TestRequireNIP98Admin(t *testing.T) {
 	sk := nostr.GeneratePrivateKey()
 	pub, _ := nostr.GetPublicKey(sk)
+	expectedNpub, _ := nip19.EncodePublicKey(pub)
 	baseURL := "http://localhost:8090"
 	maxSkew := 60 * time.Second
 
 	ok := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pk := GetNIP98Pubkey(r)
-		if pk == "" {
-			t.Error("expected pubkey in context")
+		npub := GetNIP98Npub(r)
+		if npub == "" {
+			t.Error("expected npub in context")
 		}
 		w.WriteHeader(http.StatusOK)
 	})
@@ -119,11 +121,11 @@ func TestRequireNIP98Admin(t *testing.T) {
 		}
 	})
 
-	t.Run("pubkey injected in context", func(t *testing.T) {
+	t.Run("npub injected in context", func(t *testing.T) {
 		path := "/api/v1/pubkeys"
 		var captured string
 		inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			captured = GetNIP98Pubkey(r)
+			captured = GetNIP98Npub(r)
 			w.WriteHeader(http.StatusOK)
 		})
 		handler := RequireNIP98Admin(baseURL, maxSkew, alwaysAdmin)(inner)
@@ -133,8 +135,8 @@ func TestRequireNIP98Admin(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		handler.ServeHTTP(rec, req)
-		if captured != pub {
-			t.Fatalf("expected pubkey %s in context, got %s", pub, captured)
+		if captured != expectedNpub {
+			t.Fatalf("expected npub %s in context, got %s", expectedNpub, captured)
 		}
 	})
 

@@ -5,14 +5,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
 const SessionCookieName = "relay_session"
 
-const nip98PubkeyKey contextKey = "nip98_pubkey"
+const nip98NpubKey contextKey = "nip98_npub"
 
-func GetNIP98Pubkey(r *http.Request) string {
-	v, _ := r.Context().Value(nip98PubkeyKey).(string)
+func GetNIP98Npub(r *http.Request) string {
+	v, _ := r.Context().Value(nip98NpubKey).(string)
 	return v
 }
 
@@ -47,7 +49,13 @@ func RequireNIP98Admin(publicBaseURL string, maxSkew time.Duration, isAdmin func
 				return
 			}
 
-			admin, err := isAdmin(event.PubKey)
+			npub, err := nip19.EncodePublicKey(event.PubKey)
+			if err != nil {
+				writeJSONError(w, http.StatusInternalServerError, "internal error")
+				return
+			}
+
+			admin, err := isAdmin(npub)
 			if err != nil {
 				writeJSONError(w, http.StatusInternalServerError, "internal error")
 				return
@@ -57,7 +65,7 @@ func RequireNIP98Admin(publicBaseURL string, maxSkew time.Duration, isAdmin func
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), nip98PubkeyKey, event.PubKey)
+			ctx := context.WithValue(r.Context(), nip98NpubKey, npub)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -83,7 +91,7 @@ func RequireAdmin(sessions *SessionStore, isAdmin func(string) (bool, error), ne
 			return
 		}
 
-		admin, err := isAdmin(session.PubkeyHex)
+		admin, err := isAdmin(session.Npub)
 		if err != nil || !admin {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return

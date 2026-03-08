@@ -29,7 +29,7 @@ func GetSession(r *http.Request) *Session {
 
 type Session struct {
 	ID        string
-	PubkeyHex string
+	Npub      string
 	CreatedAt time.Time
 	ExpiresAt time.Time
 }
@@ -42,7 +42,7 @@ func NewSessionStore(db *sql.DB) *SessionStore {
 	return &SessionStore{db: db}
 }
 
-func (s *SessionStore) Create(ctx context.Context, pubkeyHex string, duration time.Duration) (*Session, error) {
+func (s *SessionStore) Create(ctx context.Context, npub string, duration time.Duration) (*Session, error) {
 	id, err := generateSessionID()
 	if err != nil {
 		return nil, fmt.Errorf("generating session ID: %w", err)
@@ -52,8 +52,8 @@ func (s *SessionStore) Create(ctx context.Context, pubkeyHex string, duration ti
 	expiresAt := now.Add(duration)
 
 	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO sessions (id, pubkey_hex, created_at, expires_at) VALUES (?, ?, ?, ?)`,
-		id, pubkeyHex, now, expiresAt,
+		`INSERT INTO sessions (id, npub, created_at, expires_at) VALUES (?, ?, ?, ?)`,
+		id, npub, now, expiresAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserting session: %w", err)
@@ -61,7 +61,7 @@ func (s *SessionStore) Create(ctx context.Context, pubkeyHex string, duration ti
 
 	return &Session{
 		ID:        id,
-		PubkeyHex: pubkeyHex,
+		Npub:      npub,
 		CreatedAt: now,
 		ExpiresAt: expiresAt,
 	}, nil
@@ -70,9 +70,9 @@ func (s *SessionStore) Create(ctx context.Context, pubkeyHex string, duration ti
 func (s *SessionStore) Get(ctx context.Context, id string) (*Session, error) {
 	var session Session
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, pubkey_hex, created_at, expires_at FROM sessions WHERE id = ?`,
+		`SELECT id, npub, created_at, expires_at FROM sessions WHERE id = ?`,
 		id,
-	).Scan(&session.ID, &session.PubkeyHex, &session.CreatedAt, &session.ExpiresAt)
+	).Scan(&session.ID, &session.Npub, &session.CreatedAt, &session.ExpiresAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

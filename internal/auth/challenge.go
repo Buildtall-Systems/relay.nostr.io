@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
 const (
@@ -19,14 +20,19 @@ type Challenge struct {
 	CreatedAt time.Time
 }
 
-func NewChallenge(pubkey string) (*Challenge, error) {
+func NewChallenge(npub string) (*Challenge, error) {
+	_, hexPubkey, err := nip19.Decode(npub)
+	if err != nil {
+		return nil, fmt.Errorf("decoding npub: %w", err)
+	}
+
 	challengeBytes := make([]byte, 32)
 	if _, err := rand.Read(challengeBytes); err != nil {
 		return nil, fmt.Errorf("generating challenge: %w", err)
 	}
 
 	event := &nostr.Event{
-		PubKey:    pubkey,
+		PubKey:    hexPubkey.(string),
 		CreatedAt: nostr.Timestamp(time.Now().Unix()),
 		Kind:      ChallengeKind,
 		Tags:      nostr.Tags{{"challenge", hex.EncodeToString(challengeBytes)}},
@@ -39,13 +45,18 @@ func NewChallenge(pubkey string) (*Challenge, error) {
 	}, nil
 }
 
-func VerifySignedChallenge(signedEvent *nostr.Event, expectedPubkey string) error {
+func VerifySignedChallenge(signedEvent *nostr.Event, expectedNpub string) error {
 	if signedEvent.Kind != ChallengeKind {
 		return fmt.Errorf("invalid event kind: expected %d, got %d", ChallengeKind, signedEvent.Kind)
 	}
 
-	if signedEvent.PubKey != expectedPubkey {
-		return fmt.Errorf("pubkey mismatch: expected %s, got %s", expectedPubkey, signedEvent.PubKey)
+	_, expectedHex, err := nip19.Decode(expectedNpub)
+	if err != nil {
+		return fmt.Errorf("decoding expected npub: %w", err)
+	}
+
+	if signedEvent.PubKey != expectedHex.(string) {
+		return fmt.Errorf("pubkey mismatch")
 	}
 
 	eventTime := time.Unix(int64(signedEvent.CreatedAt), 0)

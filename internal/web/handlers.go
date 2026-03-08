@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip19"
 
 	"github.com/Buildtall-Systems/relay.nostr.io/internal/auth"
 	"github.com/Buildtall-Systems/relay.nostr.io/views"
@@ -15,12 +17,11 @@ import (
 const sessionDuration = 24 * time.Hour
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	// If already logged in, redirect to dashboard
 	cookie, err := r.Cookie(auth.SessionCookieName)
 	if err == nil {
 		session, _ := s.sessions.Get(r.Context(), cookie.Value)
 		if session != nil {
-			admin, _ := s.db.IsAdmin(r.Context(), session.PubkeyHex)
+			admin, _ := s.db.IsAdmin(r.Context(), session.Npub)
 			if admin {
 				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 				return
@@ -51,8 +52,13 @@ func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only admins can log in
-	admin, err := s.db.IsAdmin(r.Context(), req.Pubkey)
+	npub, err := nip19.EncodePublicKey(req.Pubkey)
+	if err != nil {
+		http.Error(w, "invalid pubkey", http.StatusBadRequest)
+		return
+	}
+
+	admin, err := s.db.IsAdmin(r.Context(), npub)
 	if err != nil {
 		s.logger.Error("checking admin", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -63,7 +69,7 @@ func (s *Server) handleChallenge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	challenge, err := auth.NewChallenge(req.Pubkey)
+	challenge, err := auth.NewChallenge(npub)
 	if err != nil {
 		s.logger.Error("creating challenge", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -81,12 +87,18 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := auth.VerifySignedChallenge(&signedEvent, signedEvent.PubKey); err != nil {
+	npub, err := nip19.EncodePublicKey(signedEvent.PubKey)
+	if err != nil {
+		http.Error(w, "invalid pubkey", http.StatusBadRequest)
+		return
+	}
+
+	if err := auth.VerifySignedChallenge(&signedEvent, npub); err != nil {
 		http.Error(w, fmt.Sprintf("verification failed: %v", err), http.StatusUnauthorized)
 		return
 	}
 
-	admin, err := s.db.IsAdmin(r.Context(), signedEvent.PubKey)
+	admin, err := s.db.IsAdmin(r.Context(), npub)
 	if err != nil {
 		s.logger.Error("checking admin", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -97,7 +109,7 @@ func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := s.sessions.Create(r.Context(), signedEvent.PubKey, sessionDuration)
+	session, err := s.sessions.Create(r.Context(), npub, sessionDuration)
 	if err != nil {
 		s.logger.Error("creating session", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -165,15 +177,15 @@ func (s *Server) handleListPubkeys(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAddPubkey(w http.ResponseWriter, r *http.Request) {
 	session := auth.GetSession(r)
 
-	npub := r.FormValue("npub")
-	note := r.FormValue("note")
+	npub := strings.TrimSpace(r.FormValue("npub"))
+	note := strings.TrimSpace(r.FormValue("note"))
 
 	if npub == "" {
 		http.Error(w, "npub required", http.StatusBadRequest)
 		return
 	}
 
-	if err := s.db.AddAllowedPubkey(r.Context(), npub, session.PubkeyHex, note); err != nil {
+	if err := s.db.AddAllowedPubkey(r.Context(), npub, session.Npub, note); err != nil {
 		s.logger.Error("adding pubkey", "err", err)
 		http.Error(w, fmt.Sprintf("failed to add: %v", err), http.StatusBadRequest)
 		return
@@ -183,13 +195,13 @@ func (s *Server) handleAddPubkey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRemovePubkey(w http.ResponseWriter, r *http.Request) {
-	hexPubkey := r.PathValue("hex")
-	if hexPubkey == "" {
-		http.Error(w, "hex pubkey required", http.StatusBadRequest)
+	npub := r.PathValue("npub")
+	if npub == "" {
+		http.Error(w, "npub required", http.StatusBadRequest)
 		return
 	}
 
-	if err := s.db.RemoveAllowedPubkey(r.Context(), hexPubkey); err != nil {
+	if err := s.db.RemoveAllowedPubkey(r.Context(), npub); err != nil {
 		s.logger.Error("removing pubkey", "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -199,11 +211,10 @@ func (s *Server) handleRemovePubkey(w http.ResponseWriter, r *http.Request) {
 }
 
 type apiPubkeyEntry struct {
-	HexPubkey string `json:"hex_pubkey"`
 	Npub      string `json:"npub"`
 	Note      string `json:"note"`
-	AddedBy   string `json:"added_by"`
-	AddedAt   string `json:"added_at"`
+	CreatedBy string `json:"created_by"`
+	CreatedAt string `json:"created_at"`
 }
 
 type apiAddPubkeyRequest struct {
@@ -222,11 +233,10 @@ func (s *Server) handleAPIListPubkeys(w http.ResponseWriter, r *http.Request) {
 	entries := make([]apiPubkeyEntry, len(pubkeys))
 	for i, pk := range pubkeys {
 		entries[i] = apiPubkeyEntry{
-			HexPubkey: pk.HexPubkey,
 			Npub:      pk.Npub,
 			Note:      pk.Note,
-			AddedBy:   pk.AddedBy,
-			AddedAt:   pk.AddedAt.Format(time.RFC3339),
+			CreatedBy: pk.CreatedBy,
+			CreatedAt: pk.CreatedAt.Format(time.RFC3339),
 		}
 	}
 
@@ -241,14 +251,15 @@ func (s *Server) handleAPIAddPubkey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.Npub = strings.TrimSpace(req.Npub)
 	if req.Npub == "" {
 		writeAPIError(w, http.StatusBadRequest, "npub required")
 		return
 	}
 
-	addedBy := auth.GetNIP98Pubkey(r)
+	createdBy := auth.GetNIP98Npub(r)
 
-	if err := s.db.AddAllowedPubkey(r.Context(), req.Npub, addedBy, req.Note); err != nil {
+	if err := s.db.AddAllowedPubkey(r.Context(), req.Npub, createdBy, req.Note); err != nil {
 		s.logger.Error("adding pubkey", "err", err)
 		writeAPIError(w, http.StatusBadRequest, fmt.Sprintf("failed to add: %v", err))
 		return
@@ -257,20 +268,20 @@ func (s *Server) handleAPIAddPubkey(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"npub":     req.Npub,
-		"note":     req.Note,
-		"added_by": addedBy,
+		"npub":       req.Npub,
+		"note":       req.Note,
+		"created_by": createdBy,
 	})
 }
 
 func (s *Server) handleAPIRemovePubkey(w http.ResponseWriter, r *http.Request) {
-	hexPubkey := r.PathValue("hex")
-	if hexPubkey == "" {
-		writeAPIError(w, http.StatusBadRequest, "hex pubkey required")
+	npub := r.PathValue("npub")
+	if npub == "" {
+		writeAPIError(w, http.StatusBadRequest, "npub required")
 		return
 	}
 
-	if err := s.db.RemoveAllowedPubkey(r.Context(), hexPubkey); err != nil {
+	if err := s.db.RemoveAllowedPubkey(r.Context(), npub); err != nil {
 		s.logger.Error("removing pubkey", "err", err)
 		writeAPIError(w, http.StatusInternalServerError, "internal error")
 		return
