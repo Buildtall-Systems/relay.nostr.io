@@ -8,9 +8,32 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Buildtall-Systems/btk/auth/nip98"
 	"github.com/nbd-wtf/go-nostr"
 	"github.com/nbd-wtf/go-nostr/nip19"
 )
+
+func makeNIP98Event(t *testing.T, sk string, url, method string, createdAt nostr.Timestamp) *nostr.Event {
+	t.Helper()
+	pub, err := nostr.GetPublicKey(sk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev := &nostr.Event{
+		PubKey:    pub,
+		CreatedAt: createdAt,
+		Kind:      nip98.KindHTTPAuth,
+		Content:   "",
+		Tags: nostr.Tags{
+			{"u", url},
+			{"method", method},
+		},
+	}
+	if err := ev.Sign(sk); err != nil {
+		t.Fatal(err)
+	}
+	return ev
+}
 
 func nip98Header(t *testing.T, sk, url, method string) string {
 	t.Helper()
