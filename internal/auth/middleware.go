@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Buildtall-Systems/btk/auth/nip98"
 	"github.com/nbd-wtf/go-nostr/nip19"
 )
 
@@ -37,14 +38,14 @@ func RequireNIP98Admin(publicBaseURL string, maxSkew time.Duration, isAdmin func
 				return
 			}
 
-			event, err := ParseNIP98FromHeader(authHeader)
+			event, err := nip98.ParseNIP98FromHeader(authHeader)
 			if err != nil {
 				writeJSONError(w, http.StatusUnauthorized, "invalid NIP-98 header: "+err.Error())
 				return
 			}
 
 			expectedURL := publicBaseURL + r.URL.Path
-			if err := VerifyNIP98Event(event, expectedURL, r.Method, maxSkew); err != nil {
+			if err := nip98.VerifyNIP98Event(event, expectedURL, r.Method, maxSkew); err != nil {
 				writeJSONError(w, http.StatusUnauthorized, "NIP-98 verification failed: "+err.Error())
 				return
 			}
